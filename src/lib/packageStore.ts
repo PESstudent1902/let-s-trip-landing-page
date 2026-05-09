@@ -60,63 +60,6 @@ export function inferDestinationIdFromPackage(pkg: Pick<Package, "name" | "image
   return destinations[0]?.id || GENERAL_DESTINATION_ID;
 }
 
-// === Admin Auth ===
-// Default password: "letstrip2026"
-
-const ADMIN_PASSWORD_HASH = "d072f2d8c297fed0a7ba34c3fa16824d32b42bdc1080f66d950d60d39366519e";
-const AUTH_KEY = "letstrip_admin_auth";
-const AUTH_EXPIRY = 24 * 60 * 60 * 1000;
-
-function getFromStorage<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) return JSON.parse(stored) as T;
-  } catch (error) {
-    console.error(`Failed to read ${key} from localStorage:`, error);
-  }
-  return fallback;
-}
-
-function saveToStorage<T>(key: string, data: T): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (error) {
-    console.error(`Failed to save ${key} to localStorage:`, error);
-  }
-}
-
-async function sha256(message: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-export async function verifyAdminPassword(password: string): Promise<boolean> {
-  const hash = await sha256(password);
-  if (hash === ADMIN_PASSWORD_HASH) {
-    saveToStorage(AUTH_KEY, { authenticated: true, timestamp: Date.now() });
-    return true;
-  }
-  return false;
-}
-
-export function isAdminAuthenticated(): boolean {
-  const session = getFromStorage<{ authenticated: boolean; timestamp: number } | null>(AUTH_KEY, null);
-  if (!session) return false;
-  if (Date.now() - session.timestamp > AUTH_EXPIRY) {
-    if (typeof window !== "undefined") localStorage.removeItem(AUTH_KEY);
-    return false;
-  }
-  return session.authenticated;
-}
-
-export function logoutAdmin(): void {
-  if (typeof window !== "undefined") localStorage.removeItem(AUTH_KEY);
-}
-
 export const AVAILABLE_IMAGES = [
   { value: "/thailand.png", label: "Thailand" },
   { value: "/dubai.png", label: "Dubai" },
